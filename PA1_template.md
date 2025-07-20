@@ -1,0 +1,185 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+output: 
+  html_document:
+    keep_md: true
+date: "2025-07-20"
+---
+
+
+## Background
+
+It is now possible to collect a large amount of data about personal movement using activity monitoring devices such as a Fitbit Nike Fuelband or Jawbone Up. These type of devices are part of the “quantified self” movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. But these data remain under-utilized both because the raw data are hard to obtain and there is a lack of statistical methods and software for processing and interpreting the data.
+
+## The variables included in this dataset are:
+
+**steps**: Number of steps taking in a 5-minute interval (missing values are coded as NANAstart color red, start verbatim, NA, end verbatim, end color red)
+
+**date**: The date on which the measurement was taken in YYYY-MM-DD format
+
+**interval**: Identifier for the 5-minute interval in which measurement was taken
+
+The dataset is stored in a comma-separated-value (CSV) file and there are a total of 17,568 observations in this dataset.
+
+Code for reading in the dataset and/or processing the data  
+
+
+``` r
+activity <- read_csv("activity.csv")
+```
+
+```
+## Rows: 17568 Columns: 3
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: ","
+## dbl  (2): steps, interval
+## date (1): date
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+```
+
+Histogram of the total number of steps taken each day  
+
+
+``` r
+plotData <- activity %>%
+            select(steps,date) %>%
+            mutate(date = ymd(date)) %>%
+            group_by(date) %>%
+            summarise(stepCount = sum(steps, na.rm=TRUE))
+
+
+ggplot(plotData, aes(x = stepCount)) +                          
+    geom_histogram()
+```
+
+```
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
+
+Mean and median number of steps taken each day  
+
+
+``` r
+mean(plotData$stepCount)
+```
+
+```
+## [1] 9354.23
+```
+
+``` r
+median(plotData$stepCount)
+```
+
+```
+## [1] 10395
+```
+
+Time series plot of the average number of steps taken 
+
+
+``` r
+plotData <- activity %>%
+    select(steps,date) %>%
+    mutate(date = ymd(date)) %>%
+    group_by(date) %>%
+    summarise(meanCount = mean(steps, na.rm=TRUE))
+
+ggplot(plotData,aes(x= date, y= meanCount))+
+    geom_line()+
+    geom_point()
+```
+
+```
+## Warning: Removed 2 rows containing missing values or values outside the scale range
+## (`geom_line()`).
+```
+
+```
+## Warning: Removed 8 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
+
+The 5-minute interval that, on average, contains the maximum number of steps  
+
+
+``` r
+plotData <- activity %>%
+    select(interval,steps) %>%
+    group_by(interval) %>%
+    summarise(aveSteps = mean(steps, na.rm = TRUE)) %>%
+    filter(!is.na(aveSteps)) %>%
+    slice_max(aveSteps, n = 1)
+
+table(plotData)
+```
+
+```
+##         aveSteps
+## interval 206.169811320755
+##      835                1
+```
+
+
+``` r
+numZero <- activity$steps
+numZeroSum <- sum(numZero == 0, na.rm=TRUE)
+```
+
+Code to describe and show a strategy for imputing missing data  
+As there are 11014 0 values it was decided to replace all NA with 0
+
+
+
+Histogram of the total number of steps taken each day after missing values are imputed  
+
+
+``` r
+plotData <- activity %>%
+    select(steps,date) %>%
+    mutate(steps = ifelse(is.na(steps), 0, steps)) %>%
+    mutate(date = ymd(date)) %>%
+    group_by(date) %>%
+    summarise(stepCount = sum(steps, na.rm=TRUE))
+
+
+ggplot(plotData, aes(x = stepCount)) +                          
+    geom_histogram()
+```
+
+```
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
+
+Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends   
+
+
+``` r
+plotData <- activity %>%
+    select(interval,steps,date) %>%
+    mutate(date = ymd(date)) %>%
+    mutate(date = wday(date, label=TRUE,week_start = 1)) %>%
+    group_by(interval,date) %>%
+    summarise(aveSteps = mean(steps, na.rm = TRUE))
+```
+
+```
+## `summarise()` has grouped output by 'interval'. You can override using the
+## `.groups` argument.
+```
+
+``` r
+ggplot(plotData, aes(x = interval, y = aveSteps, color = date)) +
+    geom_point(show.legend = FALSE) +
+    facet_wrap(~date)
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
